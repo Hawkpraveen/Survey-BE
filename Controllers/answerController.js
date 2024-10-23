@@ -101,8 +101,8 @@ export const getSurveyAnswers = async (req, res) => {
             ans.questionId.equals(question._id)
           );
           return {
-            user: answer.user.name, // User's name who submitted the answer
-            answer: specificAnswer ? specificAnswer.answer : null, // The answer given by the user
+            user: answer.user.name,
+            answer: specificAnswer ? specificAnswer.answer : null,
           };
         });
 
@@ -120,5 +120,56 @@ export const getSurveyAnswers = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching answers", error: error.message });
+  }
+};
+
+export const getSurveyRatingData = async (req, res) => {
+  const { surveyId } = req.params;
+
+  try {
+    const survey = await Survey.findById(surveyId).populate("questions");
+
+    if (!survey) {
+      return res.status(404).json({ message: "Survey not found." });
+    }
+
+    const answers = await Answer.find({ survey: surveyId });
+
+    const chartData = [];
+
+    survey.questions.forEach((question) => {
+      if (question.type === "rating") {
+        const ratingsCount = {};
+
+        for (let i = 1; i <= question.maxRating; i++) {
+          ratingsCount[i] = 0;
+        }
+
+        answers.forEach((answer) => {
+          const specificAnswer = answer.answers.find((ans) =>
+            ans.questionId.equals(question._id)
+          );
+
+          if (specificAnswer && specificAnswer.answer !== null) {
+            const rating = specificAnswer.answer;
+
+            if (ratingsCount[rating] !== undefined) {
+              ratingsCount[rating]++;
+            }
+          }
+        });
+
+        chartData.push({
+          question: question.question,
+          ratings: ratingsCount,
+        });
+      }
+    });
+
+    res.json(chartData);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching rating data", error: error.message });
   }
 };

@@ -11,6 +11,7 @@ import {
 } from "../Controllers/surveyController.js";
 import {
   getSurveyAnswers,
+  getSurveyRatingData,
   submitSurveyAnswers,
 } from "../Controllers/answerController.js";
 
@@ -28,5 +29,6 @@ router.delete("/delete-survey/:id", verifyToken, verifyAdmin, deleteSurvey);
 // Answer routes
 router.post("/surveys/:surveyId/answers", verifyToken, submitSurveyAnswers);
 router.get("/surveys/:surveyId/answers", verifyToken, getSurveyAnswers);
+router.get('/survey/:surveyId/rating-data',verifyToken, getSurveyRatingData);
 
 export default router;
