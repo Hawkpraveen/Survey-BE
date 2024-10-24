@@ -173,3 +173,4 @@ export const getSurveyRatingData = async (req, res) => {
       .json({ message: "Error fetching rating data", error: error.message });
   }
 };
+  

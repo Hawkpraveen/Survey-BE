@@ -122,22 +122,34 @@ export const deleteSurvey = async (req, res) => {
   }
 };
 
-
 export const getUserAnsweredSurveys = async (req, res) => {
   try {
-    const userId = req.user.id; 
+    const userId = req.user.id; // Get the user's ID from the request (after authentication)
 
+    // Find all answered surveys for the user and populate survey details (title, description)
     const answeredSurveys = await Answer.find({ user: userId })
-      .populate('survey', 'title description') 
-      .select('submittedAt'); 
+      .populate('survey', 'title description') // Populate survey title and description
+      .select('answers submittedAt survey'); // Include answers and submission date
 
-    if (!answeredSurveys) {
+    // Check if no surveys have been answered
+    if (!answeredSurveys || answeredSurveys.length === 0) {
       return res.status(404).json({ message: 'No answered surveys found.' });
     }
 
-    res.json(answeredSurveys);
+    // Format the response to include survey details and answers
+    const formattedSurveys = answeredSurveys.map((answeredSurvey) => ({
+      surveyId: answeredSurvey.survey._id,
+      surveyTitle: answeredSurvey.survey.title,
+      surveyDescription: answeredSurvey.survey.description,
+      answers: answeredSurvey.answers, // Include the answers provided by the user
+      submittedAt: answeredSurvey.submittedAt, // When the survey was submitted
+    }));
+
+    // Return the formatted response
+    res.status(200).json(formattedSurveys);
   } catch (error) {
     console.error('Error fetching answered surveys:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
