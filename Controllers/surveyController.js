@@ -127,8 +127,12 @@ export const getUserAnsweredSurveys = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Fetch answered surveys and populate the survey details
     const answeredSurveys = await Answer.find({ user: userId })
-      .populate("survey", "title description")
+      .populate({
+        path: "survey",
+        select: "title description questions",
+      })
       .select("answers submittedAt survey");
 
     // Check if no surveys have been answered
@@ -138,15 +142,24 @@ export const getUserAnsweredSurveys = async (req, res) => {
 
     // Format the response to include survey details and answers, including max rating
     const formattedSurveys = answeredSurveys.map((answeredSurvey) => {
+      // Create a map of question IDs to maxRating for quick lookup
+      const questionMaxRatings = answeredSurvey.survey.questions.reduce(
+        (acc, question) => {
+          acc[question._id] = question.maxRating; // Map question ID to its maxRating
+          return acc;
+        },
+        {}
+      );
+
       return {
         surveyId: answeredSurvey.survey._id,
         surveyTitle: answeredSurvey.survey.title,
         surveyDescription: answeredSurvey.survey.description,
         submittedAt: answeredSurvey.submittedAt,
-        answers: answeredSurvey.answers.map(answer => ({
-          questionId: answer.questionId, // Assuming each answer has a questionId
+        answers: answeredSurvey.answers.map((answer) => ({
+          questionId: answer.questionId,
           answer: answer.answer,
-          maxRating: answer.maxRating, // Include the max rating here
+          maxRating: questionMaxRatings[answer.questionId],
         })),
       };
     });
@@ -157,4 +170,3 @@ export const getUserAnsweredSurveys = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
