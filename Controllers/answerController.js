@@ -176,64 +176,64 @@ export const getSurveyRatingData = async (req, res) => {
 
 //rating data for a suvery
 export const getSurveyRatingsForChart = async (req, res) => {
-  const { surveyId } = req.params; // Survey ID from the request
+  const { surveyId } = req.params;
 
   try {
-    // Fetch the survey with the given surveyId
-    const survey = await Survey.findById(surveyId);
+    // Fetch the survey by ID and populate the questions
+    const survey = await Survey.findById(surveyId).populate('questions');
+
     if (!survey) {
       return res.status(404).json({ message: "Survey not found" });
     }
 
-    // Fetch all answers for the given survey
-    const answers = await Answer.find({ survey: surveyId }).populate("user");
+    // Fetch answers for the survey
+    const answers = await Answer.find({ survey: surveyId });
 
-    // Check if there are any answers
-    if (answers.length === 0) {
-      return res.status(404).json({ message: "No answers found for this survey" });
-    }
+    // Prepare data for chart
+    const questionsData = survey.questions.map((question) => {
+      // Initialize total ratings and max ratings for the question
+      let totalRatings = 0;
+      let maxRatings = 0;
 
-    // Create a structure to hold total ratings and max ratings
-    const userRatingsMap = {};
+      // Iterate over each answer to calculate totals
+      answers.forEach((answer) => {
+        const userAnswer = answer.answers.find((ans) => ans.questionId.equals(question._id));
+        
+        if (userAnswer) {
+          const ratingValue = userAnswer.answer; // Assuming answer is a numeric rating
+          totalRatings += ratingValue;
 
-    // Process the ratings for each user
-    answers.forEach((answer) => {
-      const userId = answer.user._id.toString(); // Get the user ID
-      const ratingAnswers = answer.answers.filter(
-        (a) => typeof a.answer === "number" // Only consider numerical (rating) answers
-      );
-
-      // Initialize the user's rating if it doesn't exist
-      if (!userRatingsMap[userId]) {
-        userRatingsMap[userId] = {
-          userName: answer.user.name,
-          totalRating: 0,
-          totalMaxRating: 0,
-        };
-      }
-
-      // Calculate total rating and total max rating for this user's answers
-      ratingAnswers.forEach((rating) => {
-        const maxRating = survey.questions.find(
-          (q) => q._id.toString() === rating.questionId
-        ).maxRating; // Get max rating for the question
-
-        userRatingsMap[userId].totalRating += rating.answer || 0; // Accumulate user's rating
-        userRatingsMap[userId].totalMaxRating += maxRating; // Accumulate max rating
+          // Add to max ratings
+          if (question.maxRating) {
+            maxRatings += question.maxRating; // Assuming each question has a maxRating field
+          }
+        }
       });
+
+      return {
+        title: question.question, // Use the question text as the title
+        totalRatings,
+        maxRatings,
+      };
     });
 
-    // Convert the ratings map to an array for easy use in charts
-    const userRatings = Object.values(userRatingsMap);
+    // Calculate overall total and max ratings for all questions
+    const overallTotalRatings = questionsData.reduce((acc, curr) => acc + curr.totalRatings, 0);
+    const overallMaxRatings = questionsData.reduce((acc, curr) => acc + curr.maxRatings, 0);
 
-    // Send the data for the line chart
-    res.status(200).json({
-      surveyTitle: survey.title,
-      surveyId: survey._id,
-      userRatings,
-    });
-  } catch (err) {
-    console.error("Error fetching survey ratings:", err);
-    res.status(500).json({ message: "Server error" });
+    // Structure the response data for the chart
+    const responseData = {
+      questions: questionsData,
+      overall: {
+        totalRatings: overallTotalRatings,
+        maxRatings: overallMaxRatings,
+      },
+    };
+
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error("Error fetching survey ratings for chart:", error);
+    res.status(500).json({ message: "Failed to fetch survey ratings for chart", error });
   }
 };
+
