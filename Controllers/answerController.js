@@ -189,44 +189,55 @@ export const getSurveyRatingsForChart = async (req, res) => {
     // Fetch answers for the survey
     const answers = await Answer.find({ survey: surveyId });
 
-    // Prepare data for chart
-    const questionsData = survey.questions.map((question) => {
-      // Initialize total ratings and max ratings for the question
-      let totalRatings = 0;
-      let maxRatings = 0;
+    // Prepare a structure to hold user ratings for each question
+    const userRatingsMap = {};
 
-      // Iterate over each answer to calculate totals
-      answers.forEach((answer) => {
-        const userAnswer = answer.answers.find((ans) => ans.questionId.equals(question._id));
-        
-        if (userAnswer) {
-          const ratingValue = userAnswer.answer; // Assuming answer is a numeric rating
-          totalRatings += ratingValue;
+    // Initialize userRatingsMap with userId and questionId structure
+    answers.forEach((answer) => {
+      answer.answers.forEach((userAnswer) => {
+        const questionId = userAnswer.questionId.toString(); // Convert to string for comparison
+        const userId = answer.user; // Assuming answer has a user field
 
-          // Add to max ratings
-          if (question.maxRating) {
-            maxRatings += question.maxRating; // Assuming each question has a maxRating field
-          }
+        // Initialize user rating entry if it doesn't exist
+        if (!userRatingsMap[userId]) {
+          userRatingsMap[userId] = {};
         }
-      });
 
+        // Initialize question rating entry if it doesn't exist
+        if (!userRatingsMap[userId][questionId]) {
+          userRatingsMap[userId][questionId] = {
+            totalRating: 0,
+            maxRating: survey.questions.find((q) => q._id.equals(questionId)).maxRating, // Get max rating for this question
+          };
+        }
+
+        // Update total rating for the specific user and question
+        userRatingsMap[userId][questionId].totalRating += userAnswer.answer; // Assuming answer is a numeric rating
+      });
+    });
+
+    // Prepare data for the response
+    const userRatingsArray = Object.entries(userRatingsMap).map(([userId, questions]) => {
       return {
-        title: question.question, // Use the question text as the title
-        totalRatings,
-        maxRatings,
+        userId,
+        userName: userId, // Assuming userId can be replaced with a user name lookup if needed
+        questionsData: Object.entries(questions).map(([questionId, data]) => ({
+          questionId,
+          totalRating: data.totalRating,
+          maxRating: data.maxRating,
+        })),
+        totalRating: Object.values(questions).reduce((acc, curr) => acc + curr.totalRating, 0),
+        maxRating: Object.values(questions).reduce((acc, curr) => acc + curr.maxRating, 0),
       };
     });
 
-    // Calculate overall total and max ratings for all questions
-    const overallTotalRatings = questionsData.reduce((acc, curr) => acc + curr.totalRatings, 0);
-    const overallMaxRatings = questionsData.reduce((acc, curr) => acc + curr.maxRatings, 0);
-
     // Structure the response data for the chart
     const responseData = {
-      questions: questionsData,
+      surveyTitle: survey.title, // Include survey title if needed
+      userRatings: userRatingsArray,
       overall: {
-        totalRatings: overallTotalRatings,
-        maxRatings: overallMaxRatings,
+        totalRatings: userRatingsArray.reduce((acc, user) => acc + user.totalRating, 0),
+        maxRatings: userRatingsArray.reduce((acc, user) => acc + user.maxRating, 0),
       },
     };
 
