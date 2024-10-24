@@ -190,28 +190,41 @@ export const getSurveyRatingsForChart = async (req, res) => {
 
     // Check if there are any answers
     if (answers.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No answers found for this survey" });
+      return res.status(404).json({ message: "No answers found for this survey" });
     }
 
+    // Create a structure to hold total ratings and max ratings
+    const userRatingsMap = {};
+
     // Process the ratings for each user
-    const userRatings = answers.map((answer) => {
+    answers.forEach((answer) => {
+      const userId = answer.user._id.toString(); // Get the user ID
       const ratingAnswers = answer.answers.filter(
         (a) => typeof a.answer === "number" // Only consider numerical (rating) answers
       );
 
-      const maxRating = ratingAnswers.reduce(
-        (max, current) => (current.answer > max ? current.answer : max), // Get max rating given by the user
-        0
-      );
+      // Initialize the user's rating if it doesn't exist
+      if (!userRatingsMap[userId]) {
+        userRatingsMap[userId] = {
+          userName: answer.user.name,
+          totalRating: 0,
+          totalMaxRating: 0,
+        };
+      }
 
-      return {
-        user: answer.user._id, // User ID
-        userName: answer.user.name, // User name for reference
-        maxRating,
-      };
+      // Calculate total rating and total max rating for this user's answers
+      ratingAnswers.forEach((rating) => {
+        const maxRating = survey.questions.find(
+          (q) => q._id.toString() === rating.questionId
+        ).maxRating; // Get max rating for the question
+
+        userRatingsMap[userId].totalRating += rating.answer || 0; // Accumulate user's rating
+        userRatingsMap[userId].totalMaxRating += maxRating; // Accumulate max rating
+      });
     });
+
+    // Convert the ratings map to an array for easy use in charts
+    const userRatings = Object.values(userRatingsMap);
 
     // Send the data for the line chart
     res.status(200).json({
@@ -224,3 +237,4 @@ export const getSurveyRatingsForChart = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
