@@ -195,7 +195,7 @@ export const getSurveyRatingsForChart = async (req, res) => {
     // Iterate over answers to populate user ratings
     answers.forEach((answer) => {
       const userId = answer.user; // Assuming answer has a user field
-      const userName = answer.userName; // Assuming userName is available in the answer
+      const userName = answer.name; // Assuming userName is available in the answer
 
       // Initialize user entry if it doesn't exist
       if (!userTotalRatingsMap[userId]) {
