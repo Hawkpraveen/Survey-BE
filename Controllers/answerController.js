@@ -173,4 +173,54 @@ export const getSurveyRatingData = async (req, res) => {
       .json({ message: "Error fetching rating data", error: error.message });
   }
 };
-  
+
+//rating data for a suvery
+export const getSurveyRatingsForChart = async (req, res) => {
+  const { surveyId } = req.params; // Survey ID from the request
+
+  try {
+    // Fetch the survey with the given surveyId
+    const survey = await Survey.findById(surveyId);
+    if (!survey) {
+      return res.status(404).json({ message: "Survey not found" });
+    }
+
+    // Fetch all answers for the given survey
+    const answers = await Answer.find({ survey: surveyId }).populate("user");
+
+    // Check if there are any answers
+    if (answers.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No answers found for this survey" });
+    }
+
+    // Process the ratings for each user
+    const userRatings = answers.map((answer) => {
+      const ratingAnswers = answer.answers.filter(
+        (a) => typeof a.answer === "number" // Only consider numerical (rating) answers
+      );
+
+      const maxRating = ratingAnswers.reduce(
+        (max, current) => (current.answer > max ? current.answer : max), // Get max rating given by the user
+        0
+      );
+
+      return {
+        user: answer.user._id, // User ID
+        userName: answer.user.name, // User name for reference
+        maxRating,
+      };
+    });
+
+    // Send the data for the line chart
+    res.status(200).json({
+      surveyTitle: survey.title,
+      surveyId: survey._id,
+      userRatings,
+    });
+  } catch (err) {
+    console.error("Error fetching survey ratings:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
