@@ -24,7 +24,7 @@ export const createSurvey = async (req, res) => {
 };
 
 // Get all surveys
-export const getAllSurveys = async (req, res) => {  
+export const getAllSurveys = async (req, res) => {
   try {
     const surveys = await Survey.find();
     res.json(surveys);
@@ -47,10 +47,11 @@ export const getSurveyById = async (req, res) => {
 
     return res.status(200).json(survey); // Return a 200 status code for a successful fetch
   } catch (error) {
-    return res.status(500).json({ message: "Error fetching survey", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error fetching survey", error: error.message });
   }
 };
-
 
 export const getSurveysByAdmin = async (req, res) => {
   const userId = req.user.id;
@@ -124,16 +125,15 @@ export const deleteSurvey = async (req, res) => {
 
 export const getUserAnsweredSurveys = async (req, res) => {
   try {
-    const userId = req.user.id; // Get the user's ID from the request (after authentication)
+    const userId = req.user.id;
 
-    // Find all answered surveys for the user and populate survey details (title, description)
     const answeredSurveys = await Answer.find({ user: userId })
-      .populate('survey', 'title description') // Populate survey title and description
-      .select('answers submittedAt survey'); // Include answers and submission date
+      .populate("survey", "title description")
+      .select("answers submittedAt survey");
 
     // Check if no surveys have been answered
     if (!answeredSurveys || answeredSurveys.length === 0) {
-      return res.status(404).json({ message: 'No answered surveys found.' });
+      return res.status(404).json({ message: "No answered surveys found." });
     }
 
     // Format the response to include survey details and answers
@@ -141,15 +141,13 @@ export const getUserAnsweredSurveys = async (req, res) => {
       surveyId: answeredSurvey.survey._id,
       surveyTitle: answeredSurvey.survey.title,
       surveyDescription: answeredSurvey.survey.description,
-      answers: answeredSurvey.answers, // Include the answers provided by the user
-      submittedAt: answeredSurvey.submittedAt, // When the survey was submitted
+      answers: answeredSurvey.answers,
+      submittedAt: answeredSurvey.submittedAt,
     }));
 
-    // Return the formatted response
     res.status(200).json(formattedSurveys);
   } catch (error) {
-    console.error('Error fetching answered surveys:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching answered surveys:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
-
