@@ -186,16 +186,16 @@ export const getSurveyRatingsForChart = async (req, res) => {
       return res.status(404).json({ message: "Survey not found" });
     }
 
-    // Fetch answers for the survey
-    const answers = await Answer.find({ survey: surveyId });
+    // Fetch answers for the survey and populate user details
+    const answers = await Answer.find({ survey: surveyId }).populate('user', 'name');
 
     // Initialize a map to hold total ratings for each user
     const userTotalRatingsMap = {};
 
     // Iterate over answers to populate user ratings
     answers.forEach((answer) => {
-      const userId = answer.user; 
-      const userName = answer.name; 
+      const userId = answer.user._id; // Get user ID from populated user
+      const userName = answer.user.name; // Get user name from populated user
 
       // Initialize user entry if it doesn't exist
       if (!userTotalRatingsMap[userId]) {
@@ -222,18 +222,14 @@ export const getSurveyRatingsForChart = async (req, res) => {
       });
     });
 
-    // Prepare response data
+    // Prepare response data with only user ratings
     const responseData = {
       userRatings: Object.values(userTotalRatingsMap).map(user => ({
         userId: user.userId,
-        userName: user.name,
+        userName: user.userName, // Using userName directly
         totalRating: user.totalRating,
         maxRating: user.maxRating,
       })),
-      overall: {
-        totalRatings: Object.values(userTotalRatingsMap).reduce((acc, user) => acc + user.totalRating, 0),
-        maxRatings: Object.values(userTotalRatingsMap).reduce((acc, user) => acc + user.maxRating, 0),
-      },
     };
 
     res.status(200).json(responseData);
@@ -242,4 +238,5 @@ export const getSurveyRatingsForChart = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch survey ratings for chart", error });
   }
 };
+
 
