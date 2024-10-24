@@ -189,55 +189,50 @@ export const getSurveyRatingsForChart = async (req, res) => {
     // Fetch answers for the survey
     const answers = await Answer.find({ survey: surveyId });
 
-    // Prepare a structure to hold user ratings for each question
-    const userRatingsMap = {};
+    // Initialize a map to hold total ratings for each user
+    const userTotalRatingsMap = {};
 
-    // Initialize userRatingsMap with userId and questionId structure
+    // Iterate over answers to populate user ratings
     answers.forEach((answer) => {
+      const userId = answer.user; // Assuming answer has a user field
+      const userName = answer.userName; // Assuming userName is available in the answer
+
+      // Initialize user entry if it doesn't exist
+      if (!userTotalRatingsMap[userId]) {
+        userTotalRatingsMap[userId] = {
+          userId,
+          userName,
+          totalRating: 0, // To accumulate ratings
+          maxRating: 0,   // To accumulate max ratings
+        };
+      }
+
       answer.answers.forEach((userAnswer) => {
         const questionId = userAnswer.questionId.toString(); // Convert to string for comparison
-        const userId = answer.user; // Assuming answer has a user field
+        const ratingValue = userAnswer.answer; // Assuming answer is a numeric rating
 
-        // Initialize user rating entry if it doesn't exist
-        if (!userRatingsMap[userId]) {
-          userRatingsMap[userId] = {};
+        // Update total rating for the user
+        userTotalRatingsMap[userId].totalRating += ratingValue;
+
+        // Update max rating for the user based on the question's max rating
+        const question = survey.questions.find(q => q._id.equals(questionId));
+        if (question && question.maxRating) {
+          userTotalRatingsMap[userId].maxRating += question.maxRating; // Accumulate max rating
         }
-
-        // Initialize question rating entry if it doesn't exist
-        if (!userRatingsMap[userId][questionId]) {
-          userRatingsMap[userId][questionId] = {
-            totalRating: 0,
-            maxRating: survey.questions.find((q) => q._id.equals(questionId)).maxRating, // Get max rating for this question
-          };
-        }
-
-        // Update total rating for the specific user and question
-        userRatingsMap[userId][questionId].totalRating += userAnswer.answer; // Assuming answer is a numeric rating
       });
     });
 
-    // Prepare data for the response
-    const userRatingsArray = Object.entries(userRatingsMap).map(([userId, questions]) => {
-      return {
-        userId,
-        userName: userId, // Assuming userId can be replaced with a user name lookup if needed
-        questionsData: Object.entries(questions).map(([questionId, data]) => ({
-          questionId,
-          totalRating: data.totalRating,
-          maxRating: data.maxRating,
-        })),
-        totalRating: Object.values(questions).reduce((acc, curr) => acc + curr.totalRating, 0),
-        maxRating: Object.values(questions).reduce((acc, curr) => acc + curr.maxRating, 0),
-      };
-    });
-
-    // Structure the response data for the chart
+    // Prepare response data
     const responseData = {
-      surveyTitle: survey.title, // Include survey title if needed
-      userRatings: userRatingsArray,
+      userRatings: Object.values(userTotalRatingsMap).map(user => ({
+        userId: user.userId,
+        userName: user.userName,
+        totalRating: user.totalRating,
+        maxRating: user.maxRating,
+      })),
       overall: {
-        totalRatings: userRatingsArray.reduce((acc, user) => acc + user.totalRating, 0),
-        maxRatings: userRatingsArray.reduce((acc, user) => acc + user.maxRating, 0),
+        totalRatings: Object.values(userTotalRatingsMap).reduce((acc, user) => acc + user.totalRating, 0),
+        maxRatings: Object.values(userTotalRatingsMap).reduce((acc, user) => acc + user.maxRating, 0),
       },
     };
 
