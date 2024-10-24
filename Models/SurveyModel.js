@@ -14,7 +14,7 @@ const surveySchema = new mongoose.Schema({
       question: {
         type: String,
         required: true,
-      },
+      },  
       type: {
         type: String,
         enum: [

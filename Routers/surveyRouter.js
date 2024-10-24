@@ -29,6 +29,6 @@ router.delete("/delete-survey/:id", verifyToken, verifyAdmin, deleteSurvey);
 // Answer routes
 router.post("/surveys/:surveyId/answers", verifyToken, submitSurveyAnswers);
 router.get("/surveys/:surveyId/answers", verifyToken, getSurveyAnswers);
-router.get('/survey/:surveyId/rating-data',verifyToken, getSurveyRatingData);
+router.get("/survey/:surveyId/rating-data", verifyToken, getSurveyRatingData);
 
 export default router;

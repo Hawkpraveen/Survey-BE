@@ -136,14 +136,20 @@ export const getUserAnsweredSurveys = async (req, res) => {
       return res.status(404).json({ message: "No answered surveys found." });
     }
 
-    // Format the response to include survey details and answers
-    const formattedSurveys = answeredSurveys.map((answeredSurvey) => ({
-      surveyId: answeredSurvey.survey._id,
-      surveyTitle: answeredSurvey.survey.title,
-      surveyDescription: answeredSurvey.survey.description,
-      answers: answeredSurvey.answers,
-      submittedAt: answeredSurvey.submittedAt,
-    }));
+    // Format the response to include survey details and answers, including max rating
+    const formattedSurveys = answeredSurveys.map((answeredSurvey) => {
+      return {
+        surveyId: answeredSurvey.survey._id,
+        surveyTitle: answeredSurvey.survey.title,
+        surveyDescription: answeredSurvey.survey.description,
+        submittedAt: answeredSurvey.submittedAt,
+        answers: answeredSurvey.answers.map(answer => ({
+          questionId: answer.questionId, // Assuming each answer has a questionId
+          answer: answer.answer,
+          maxRating: answer.maxRating, // Include the max rating here
+        })),
+      };
+    });
 
     res.status(200).json(formattedSurveys);
   } catch (error) {
@@ -151,3 +157,4 @@ export const getUserAnsweredSurveys = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
