@@ -194,8 +194,8 @@ export const getSurveyRatingsForChart = async (req, res) => {
 
     // Iterate over answers to populate user ratings
     answers.forEach((answer) => {
-      const userId = answer.user; // Assuming answer has a user field
-      const userName = answer.name; // Assuming userName is available in the answer
+      const userId = answer.user; 
+      const userName = answer.name; 
 
       // Initialize user entry if it doesn't exist
       if (!userTotalRatingsMap[userId]) {
@@ -226,7 +226,7 @@ export const getSurveyRatingsForChart = async (req, res) => {
     const responseData = {
       userRatings: Object.values(userTotalRatingsMap).map(user => ({
         userId: user.userId,
-        userName: user.userName,
+        userName: user.name,
         totalRating: user.totalRating,
         maxRating: user.maxRating,
       })),
